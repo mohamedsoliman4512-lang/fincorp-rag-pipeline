@@ -25,15 +25,18 @@ except ImportError:  # pragma: no cover
     load_dotenv = None  # type: ignore[assignment]
 
 EVIDENCE = "evidence/real_run_output.txt"
+PROBE = "evidence/placeholder_probe.txt"
 FILES = [
     "workflow_architecture.py",
     "test_workflow_architecture.py",
     "run_evidence.py",
+    "probe_placeholders.py",
     "requirements.txt",
     "README.md",
     "design_proposal.md",
     ".env.example",
     EVIDENCE,
+    PROBE,
 ]
 KEY_PATTERN = re.compile(r"sk-[A-Za-z0-9_-]{20,}|gsk_[A-Za-z0-9]{20,}")
 OUTPUT = "fincorp_submission_final.zip"
@@ -86,8 +89,12 @@ def check(root: Path, sender: str) -> List[str]:
         problems.append(f'design_proposal.md has no "**From:** {sender}"')
     if not proposal.rstrip().endswith(sender):
         problems.append(f'design_proposal.md must end with "{sender}"')
-    if EVIDENCE not in proposal:
-        problems.append(f"design_proposal.md does not mention {EVIDENCE}")
+    for pointer in (EVIDENCE, PROBE):
+        if pointer not in proposal:
+            problems.append(f"design_proposal.md does not mention {pointer}")
+    probe = texts[PROBE]
+    if "Mode: LIVE" not in probe or "API metadata:" not in probe:
+        problems.append("The probe file has no live model replies.")
     return problems
 
 

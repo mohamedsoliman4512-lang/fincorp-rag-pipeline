@@ -39,9 +39,17 @@ The saved run used Groq (`api.groq.com`) with `openai/gpt-oss-120b`, not
 `design_proposal.md`. In short: the model sometimes refused to produce JSON
 (parser error), sometimes invented or left empty the company name (accepted by
 the contract alone, and in one case rejected by the grounding check), and
-answered correctly when the record was complete. The placeholders `UNKNOWN`
-and `0.0` did not appear in that run. Each case is one or two calls, so these
-are observations, not statistics.
+answered correctly when the record was complete. In that run, whose prompts
+forbid placeholders, `UNKNOWN` and `0.0` did not appear. Each case is one or
+two calls, so these are observations, not statistics.
+
+A second script, `probe_placeholders.py`, sends the same mock records with
+prompts that lack that rule, 5 calls per intent, and saves
+`evidence/placeholder_probe.txt`. There the model returned
+`net_income = 0.0` in 4 of 5 financial calls and the company name `FinCorp`,
+which the source does not contain, in all 9 accepted answers; `UNKNOWN` did
+not appear. At temperature 0 the repeats are almost identical, so treat the
+counts as one observed behaviour, not as statistics.
 
 ## Grounding check
 

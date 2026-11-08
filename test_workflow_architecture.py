@@ -329,8 +329,12 @@ def make_submission_tree(root: Path, evidence: str, sender: str) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text("placeholder file\n", encoding="utf-8")
     (root / ms.EVIDENCE).write_text(evidence, encoding="utf-8")
+    (root / ms.PROBE).write_text(
+        "Mode: LIVE\nAPI metadata: {}\n", encoding="utf-8"
+    )
     (root / "design_proposal.md").write_text(
-        f"**From:** {sender}\nSee {ms.EVIDENCE}\n\nBest regards,\n{sender}\n",
+        f"**From:** {sender}\nSee {ms.EVIDENCE} and {ms.PROBE}\n\n"
+        f"Best regards,\n{sender}\n",
         encoding="utf-8",
     )
 
@@ -387,3 +391,31 @@ def test_submission_check_blocks_a_live_run_where_every_call_failed(
     assert any("no real reply" in p for p in problems)
     assert any("authentication errors" in p for p in problems)
     assert any("FinancialSummary" in p for p in problems)
+
+
+def test_probe_counts_placeholders_and_marks_offline_runs() -> None:
+    import probe_placeholders as pp
+
+    responses = [
+        '{"company_name": "UNKNOWN", "quarter": "Q3 2023", '
+        '"total_revenue": 45000.0, "net_income": 0.0}',
+        "I cannot provide that.",
+        '{"company_name": "", "sentiment_score": 0.5, '
+        '"top_headlines": ["a", "a", "a"]}',
+    ]
+    text, outcomes = pp.run_probe(FakeListChatModel(responses=responses), 1)
+    assert "Mode: OFFLINE TEST (fake model)" in text
+    assert "API key is not recorded" in text
+    assert "Prompt sent to the model" in text
+    by_intent = {o.intent: o for o in outcomes}
+    assert by_intent["financial"].status == "ACCEPTED"
+    assert by_intent["financial"].findings == [
+        "placeholder_text",
+        "zero_amount",
+    ]
+    assert by_intent["news"].status == "PARSE_ERROR"
+    assert pp.placeholder_findings(
+        wa.MarketNews(
+            company_name="", sentiment_score=0.1, top_headlines=["a"] * 3
+        )
+    ) == ["empty_name", "repeated_headline"]

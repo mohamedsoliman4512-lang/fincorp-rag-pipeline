@@ -1,0 +1,219 @@
+========================================================================
+Placeholder probe: prompts WITHOUT the anti-placeholder rule
+========================================================================
+Mode: LIVE
+Model: openai/gpt-oss-120b
+Endpoint host: api.groq.com
+Date (UTC): 2026-11-08 16:30:27
+Python: 3.12.10
+Packages: langchain-core 1.7.4, langchain-openai 1.7.3, pydantic 2.14.2
+Runs per intent: 5
+The API key is not recorded in this file.
+
+========================================================================
+Intent: financial
+========================================================================
+Source record (mock):
+Financial Data DB Record: Q3 EPS $1.25, Net Revenue $45B. Associated query: 'Impact of the new generative AI orchestration on Q4 profit margins'.
+Prompt sent to the model (same in every run):
+You are a financial extraction engine for FinCorp.
+Using ONLY the retrieved record and the user query below, extract the data
+into the required JSON contract. Report monetary values as floats in
+millions (e.g. $45B -> 45000.0). The quarter must look like 'Q3 2023'.
+
+User query: Impact of the new generative AI orchestration on Q4 profit margins
+
+Retrieved financial record:
+Financial Data DB Record: Q3 EPS $1.25, Net Revenue $45B. Associated query: 'Impact of the new generative AI orchestration on Q4 profit margins'.
+
+The output should be formatted as a JSON instance that conforms to the JSON schema below.
+
+As an example, for the schema {"properties": {"foo": {"title": "Foo", "description": "a list of strings", "type": "array", "items": {"type": "string"}}}, "required": ["foo"]}
+the object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.
+
+Here is the output schema:
+```
+{"description": "Strict contract for the ``financial_summary`` schema.\n\nActs as a structural contract that removes noise from LLM outputs for\nthe downstream reporting tools used by FinCorp.", "properties": {"company_name": {"description": "The official ticker or registered name of the entity (e.g. 'FinCorp Inc.', 'AAPL').", "title": "Company Name", "type": "string"}, "quarter": {"description": "The fiscal quarter and year referenced in the query, strictly in the format 'QX YYYY' (e.g. 'Q3 2023').", "pattern": "^Q[1-4] \\d{4}$", "title": "Quarter", "type": "string"}, "total_revenue": {"description": "Total consolidated revenue for the quarter as a numeric float in millions (e.g. 12450.50).", "title": "Total Revenue", "type": "number"}, "net_income": {"description": "Bottom-line net income for the quarter as a numeric float in millions (e.g. 3120.75).", "title": "Net Income", "type": "number"}}, "required": ["company_name", "quarter", "total_revenue", "net_income"]}
+```
+
+--- financial run 1 ---
+API metadata: {'model_name': 'openai/gpt-oss-120b', 'id': 'chatcmpl-11d97cc3-b7f6-40cb-9987-27ba7482226b', 'finish_reason': 'stop', 'token_usage': {'completion_tokens': 659, 'prompt_tokens': 580, 'total_tokens': 1239, 'completion_tokens_details': {'accepted_prediction_tokens': None, 'audio_tokens': None, 'reasoning_tokens': 606, 'rejected_prediction_tokens': None, 'text_tokens': None}, 'prompt_tokens_details': None, 'queue_time': 0.26662915, 'prompt_time': 0.028727801, 'completion_time': 1.375278478, 'total_time': 1.404006279}}
+Raw model output:
+{
+  "company_name": "FinCorp",
+  "quarter": "Q4 2023",
+  "total_revenue": 45000.0,
+  "net_income": 0.0
+}
+Parse result: ACCEPTED by the contract
+Placeholder-style values: ['zero_amount']
+Values not supported by the source: ["company_name='FinCorp' is not in the source or the query", "quarter='Q4 2023': the quarter and the year are not both in the source or the query", 'net_income=0.0 is not found in the source (amounts found, in millions: [1.2499999999999999e-06, 45000.0])']
+Elapsed: 2.4s
+
+--- financial run 2 ---
+API metadata: {'model_name': 'openai/gpt-oss-120b', 'id': 'chatcmpl-dd4a38b0-66cd-4dc8-85b3-5d06465f0147', 'finish_reason': 'stop', 'token_usage': {'completion_tokens': 808, 'prompt_tokens': 580, 'total_tokens': 1388, 'completion_tokens_details': {'accepted_prediction_tokens': None, 'audio_tokens': None, 'reasoning_tokens': 755, 'rejected_prediction_tokens': None, 'text_tokens': None}, 'prompt_tokens_details': None, 'queue_time': 0.125437225, 'prompt_time': 0.029822696, 'completion_time': 1.730975757, 'total_time': 1.760798453}}
+Raw model output:
+{
+  "company_name": "FinCorp",
+  "quarter": "Q4 2023",
+  "total_revenue": 45000.0,
+  "net_income": 0.0
+}
+Parse result: ACCEPTED by the contract
+Placeholder-style values: ['zero_amount']
+Values not supported by the source: ["company_name='FinCorp' is not in the source or the query", "quarter='Q4 2023': the quarter and the year are not both in the source or the query", 'net_income=0.0 is not found in the source (amounts found, in millions: [1.2499999999999999e-06, 45000.0])']
+Elapsed: 2.1s
+
+--- financial run 3 ---
+API metadata: {'model_name': 'openai/gpt-oss-120b', 'id': 'chatcmpl-36e1c737-a904-4bf8-b37e-eed77a814d8f', 'finish_reason': 'stop', 'token_usage': {'completion_tokens': 529, 'prompt_tokens': 580, 'total_tokens': 1109, 'completion_tokens_details': {'accepted_prediction_tokens': None, 'audio_tokens': None, 'reasoning_tokens': 476, 'rejected_prediction_tokens': None, 'text_tokens': None}, 'prompt_tokens_details': None, 'queue_time': 0.049248239, 'prompt_time': 0.028663828, 'completion_time': 1.105018678, 'total_time': 1.133682506}}
+Raw model output:
+{
+  "company_name": "FinCorp",
+  "quarter": "Q4 2023",
+  "total_revenue": 45000.0,
+  "net_income": 0.0
+}
+Parse result: ACCEPTED by the contract
+Placeholder-style values: ['zero_amount']
+Values not supported by the source: ["company_name='FinCorp' is not in the source or the query", "quarter='Q4 2023': the quarter and the year are not both in the source or the query", 'net_income=0.0 is not found in the source (amounts found, in millions: [1.2499999999999999e-06, 45000.0])']
+Elapsed: 1.4s
+
+--- financial run 4 ---
+API metadata: {'model_name': 'openai/gpt-oss-120b', 'id': 'chatcmpl-4e18f385-31cf-4c26-8f00-12504e5301b0', 'finish_reason': 'stop', 'token_usage': {'completion_tokens': 791, 'prompt_tokens': 580, 'total_tokens': 1371, 'completion_tokens_details': {'accepted_prediction_tokens': None, 'audio_tokens': None, 'reasoning_tokens': 738, 'rejected_prediction_tokens': None, 'text_tokens': None}, 'prompt_tokens_details': None, 'queue_time': 0.048127556, 'prompt_time': 0.027688285, 'completion_time': 1.662513645, 'total_time': 1.69020193}}
+Raw model output:
+{
+  "company_name": "FinCorp",
+  "quarter": "Q4 2023",
+  "total_revenue": 45000.0,
+  "net_income": 0.0
+}
+Parse result: ACCEPTED by the contract
+Placeholder-style values: ['zero_amount']
+Values not supported by the source: ["company_name='FinCorp' is not in the source or the query", "quarter='Q4 2023': the quarter and the year are not both in the source or the query", 'net_income=0.0 is not found in the source (amounts found, in millions: [1.2499999999999999e-06, 45000.0])']
+Elapsed: 1.9s
+
+--- financial run 5 ---
+API metadata: {'model_name': 'openai/gpt-oss-120b', 'id': 'chatcmpl-569af6c0-5a83-47b9-bd53-f9e0e4a5b0e2', 'finish_reason': 'stop', 'token_usage': {'completion_tokens': 598, 'prompt_tokens': 580, 'total_tokens': 1178, 'completion_tokens_details': {'accepted_prediction_tokens': None, 'audio_tokens': None, 'reasoning_tokens': 551, 'rejected_prediction_tokens': None, 'text_tokens': None}, 'prompt_tokens_details': None, 'queue_time': 0.27026004, 'prompt_time': 0.150528401, 'completion_time': 1.2344922600000001, 'total_time': 1.385020661}}
+Raw model output:
+I’m unable to construct a valid `financial_summary` JSON object because the retrieved record does not contain all of the required fields (company name, quarter year, and net income).
+Parse result: PARSE_ERROR OutputParserException
+Elapsed: 1.9s
+
+========================================================================
+Intent: news
+========================================================================
+Source record (mock):
+News Wire Extract: Analysts upgrade target stock amidst strong AI integration rally. Associated query: 'Impact of the new generative AI orchestration on Q4 profit margins'.
+Prompt sent to the model (same in every run):
+You are a market news analysis engine for FinCorp.
+Using ONLY the retrieved news and the user query below, produce a sentiment
+overview in the required JSON contract. The sentiment score must be between
+-1.0 and 1.0, and top_headlines must contain exactly 3 headlines.
+
+User query: Impact of the new generative AI orchestration on Q4 profit margins
+
+Retrieved news:
+News Wire Extract: Analysts upgrade target stock amidst strong AI integration rally. Associated query: 'Impact of the new generative AI orchestration on Q4 profit margins'.
+
+The output should be formatted as a JSON instance that conforms to the JSON schema below.
+
+As an example, for the schema {"properties": {"foo": {"title": "Foo", "description": "a list of strings", "type": "array", "items": {"type": "string"}}}, "required": ["foo"]}
+the object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.
+
+Here is the output schema:
+```
+{"description": "Strict contract for the ``market_news`` schema.\n\nEnsures unstructured news is parsed into a reliable, consistent format.", "properties": {"company_name": {"description": "The target company being analyzed in the news aggregator.", "title": "Company Name", "type": "string"}, "sentiment_score": {"description": "Sentiment derived from the aggregated news, a float between -1.0 (highly negative) and 1.0 (highly positive).", "maximum": 1.0, "minimum": -1.0, "title": "Sentiment Score", "type": "number"}, "top_headlines": {"description": "Exactly the top 3 most relevant news headlines impacting the company's market perception.", "items": {"type": "string"}, "maxItems": 3, "minItems": 3, "title": "Top Headlines", "type": "array"}}, "required": ["company_name", "sentiment_score", "top_headlines"]}
+```
+
+--- news run 1 ---
+API metadata: {'model_name': 'openai/gpt-oss-120b', 'id': 'chatcmpl-4afd23ae-0380-4553-8f0c-e768fd65251a', 'finish_reason': 'stop', 'token_usage': {'completion_tokens': 308, 'prompt_tokens': 518, 'total_tokens': 826, 'completion_tokens_details': {'accepted_prediction_tokens': None, 'audio_tokens': None, 'reasoning_tokens': 219, 'rejected_prediction_tokens': None, 'text_tokens': None}, 'prompt_tokens_details': None, 'queue_time': 0.213971591, 'prompt_time': 0.02694993, 'completion_time': 0.653560753, 'total_time': 0.680510683}}
+Raw model output:
+{
+  "company_name": "FinCorp",
+  "sentiment_score": 0.7,
+  "top_headlines": [
+    "Analysts Upgrade FinCorp Stock on Strong AI Integration Rally",
+    "FinCorp's Generative AI Orchestration Expected to Lift Q4 Profit Margins",
+    "Investor Confidence Rises as AI Integration Boosts FinCorp Outlook"
+  ]
+}
+Parse result: ACCEPTED by the contract
+Placeholder-style values: none
+Values not supported by the source: ["company_name='FinCorp' is not in the source or the query"]
+Elapsed: 1.1s
+
+--- news run 2 ---
+API metadata: {'model_name': 'openai/gpt-oss-120b', 'id': 'chatcmpl-4caf9f54-3a9a-4511-be5e-06594cdeeb0c', 'finish_reason': 'stop', 'token_usage': {'completion_tokens': 308, 'prompt_tokens': 518, 'total_tokens': 826, 'completion_tokens_details': {'accepted_prediction_tokens': None, 'audio_tokens': None, 'reasoning_tokens': 219, 'rejected_prediction_tokens': None, 'text_tokens': None}, 'prompt_tokens_details': None, 'queue_time': 0.274143015, 'prompt_time': 0.034307449, 'completion_time': 0.647463406, 'total_time': 0.681770855}}
+Raw model output:
+{
+  "company_name": "FinCorp",
+  "sentiment_score": 0.7,
+  "top_headlines": [
+    "Analysts Upgrade FinCorp Stock on Strong AI Integration Rally",
+    "FinCorp's Generative AI Orchestration Expected to Lift Q4 Profit Margins",
+    "Investor Confidence Rises as AI Integration Boosts FinCorp Outlook"
+  ]
+}
+Parse result: ACCEPTED by the contract
+Placeholder-style values: none
+Values not supported by the source: ["company_name='FinCorp' is not in the source or the query"]
+Elapsed: 1.1s
+
+--- news run 3 ---
+API metadata: {'model_name': 'openai/gpt-oss-120b', 'id': 'chatcmpl-4ce8e0a2-bc15-4246-ada7-f731580674a2', 'finish_reason': 'stop', 'token_usage': {'completion_tokens': 359, 'prompt_tokens': 518, 'total_tokens': 877, 'completion_tokens_details': {'accepted_prediction_tokens': None, 'audio_tokens': None, 'reasoning_tokens': 269, 'rejected_prediction_tokens': None, 'text_tokens': None}, 'prompt_tokens_details': None, 'queue_time': 0.017895803, 'prompt_time': 0.024071667, 'completion_time': 0.746851833, 'total_time': 0.7709235}}
+Raw model output:
+{
+  "company_name": "FinCorp",
+  "sentiment_score": 0.7,
+  "top_headlines": [
+    "Analysts Upgrade FinCorp Stock Target as AI Integration Boosts Outlook",
+    "FinCorp's Generative AI Orchestration Expected to Lift Q4 Profit Margins",
+    "Strong AI Integration Rally Drives Positive Sentiment for FinCorp"
+  ]
+}
+Parse result: ACCEPTED by the contract
+Placeholder-style values: none
+Values not supported by the source: ["company_name='FinCorp' is not in the source or the query"]
+Elapsed: 1.0s
+
+--- news run 4 ---
+API metadata: {'model_name': 'openai/gpt-oss-120b', 'id': 'chatcmpl-43b6198c-dea4-499e-ac82-a9309704f217', 'finish_reason': 'stop', 'token_usage': {'completion_tokens': 306, 'prompt_tokens': 518, 'total_tokens': 824, 'completion_tokens_details': {'accepted_prediction_tokens': None, 'audio_tokens': None, 'reasoning_tokens': 221, 'rejected_prediction_tokens': None, 'text_tokens': None}, 'prompt_tokens_details': {'audio_tokens': None, 'cache_write_tokens': None, 'cached_tokens': 512, 'image_tokens': None, 'text_tokens': None}, 'queue_time': 0.018411172, 'prompt_time': 0.027444407, 'completion_time': 0.709769881, 'total_time': 0.737214288}}
+Raw model output:
+{
+  "company_name": "FinCorp",
+  "sentiment_score": 0.7,
+  "top_headlines": [
+    "Analysts Upgrade FinCorp Stock on Robust AI Integration",
+    "FinCorp's Generative AI Orchestration Boosts Q4 Margin Outlook",
+    "Strong AI Integration Rally Fuels Investor Confidence in FinCorp"
+  ]
+}
+Parse result: ACCEPTED by the contract
+Placeholder-style values: none
+Values not supported by the source: ["company_name='FinCorp' is not in the source or the query"]
+Elapsed: 4.3s
+
+--- news run 5 ---
+API metadata: {'model_name': 'openai/gpt-oss-120b', 'id': 'chatcmpl-3d7615a1-614c-4df8-92be-22419b328707', 'finish_reason': 'stop', 'token_usage': {'completion_tokens': 309, 'prompt_tokens': 1030, 'total_tokens': 1339, 'completion_tokens_details': {'accepted_prediction_tokens': None, 'audio_tokens': None, 'reasoning_tokens': 224, 'rejected_prediction_tokens': None, 'text_tokens': None}, 'prompt_tokens_details': {'audio_tokens': None, 'cache_write_tokens': None, 'cached_tokens': 512, 'image_tokens': None, 'text_tokens': None}, 'queue_time': 0.018448992, 'prompt_time': 0.000398955, 'completion_time': 0.654912916, 'total_time': 0.655311871}}
+Raw model output:
+{
+  "company_name": "FinCorp",
+  "sentiment_score": 0.7,
+  "top_headlines": [
+    "Analysts Upgrade FinCorp Stock on Strong AI Integration",
+    "FinCorp's Generative AI Orchestration Boosts Q4 Margin Outlook",
+    "AI-Driven Strategy Fuels Investor Confidence in FinCorp"
+  ]
+}
+Parse result: ACCEPTED by the contract
+Placeholder-style values: none
+Values not supported by the source: ["company_name='FinCorp' is not in the source or the query"]
+Elapsed: 2.1s
+
+========================================================================
+SUMMARY
+========================================================================
+Intent     Calls Parse err API err Accepted Placeholder Ungrounded
+financial      5         1       0        4           4          4
+news           5         0       0        5           0          5
+Placeholder = accepted answers with placeholder text, an amount of 0.0, an empty company name or a repeated headline.

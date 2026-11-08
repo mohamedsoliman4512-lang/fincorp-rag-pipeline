@@ -132,13 +132,13 @@ the model a source that contains every field; they are not FinCorp data.
 
 What the run shows, and what it does not:
 
-1. **`UNKNOWN` and `0.0` did not appear in this run.** The earlier version of
+1. **In the saved run, `UNKNOWN` and `0.0` did not appear.** That run used
+   the prompt with the explicit anti-placeholder rule. The earlier version of
    this proposal said the model filled the missing fields with those
-   placeholders. That was an observation from an earlier development run whose
-   output I did not save, so I cannot show it, and I have removed it as a
-   finding. This run used the prompt with the explicit anti-placeholder rule.
-   On the financial intent the model refused instead (3 of 3 calls). I have no
-   run without the rule, so I cannot say whether the rule is the reason.
+   placeholders; that came from an earlier development run whose output I did
+   not save, so I removed it as a finding. On the financial intent the model
+   refused instead (3 of 3 calls). The probe below tests what happens when
+   the rule is removed.
 2. **The contract alone let unsupported values through.** In A1 (news) it
    accepted an invented company name, and in A2 (news) an empty one. The
    placeholder detector inside `run_evidence.py` reported "none" for both,
@@ -161,6 +161,44 @@ What the run shows, and what it does not:
    the information is not. The grounding check does not catch this.
 6. **With complete records, both intents returned grounded answers** (C), and
    the grounding check passed them.
+
+### Placeholder probe: the same records, prompts without the rule
+
+`probe_placeholders.py` sends the same mock records 5 times per intent with
+prompts that do not contain the two sentences forbidding guesses and
+placeholders, and with no grounding check. The full output (prompt, raw
+output and API metadata of every call) is in
+`evidence/placeholder_probe.txt`. Same model and endpoint as above (Groq,
+`openai/gpt-oss-120b`), run on 2026-11-08 (UTC).
+
+| Intent | Calls | Refused (parse error) | Accepted by the contract | Amount of `0.0` | Value not in the source |
+|---|---|---|---|---|---|
+| financial | 5 | 1 | 4 | 4 | 4 |
+| news | 5 | 0 | 5 | 0 | 5 |
+
+- **Financial:** the 4 accepted answers were identical: `company_name`
+  "FinCorp", `quarter` "Q4 2023", `total_revenue` 45000.0, `net_income` 0.0.
+  The company name, the year 2023 and the net income are not in the record or
+  the query. The `0.0` is the placeholder the platform feedback described, and
+  it is reproduced here once the rule is removed. `UNKNOWN` did not appear in
+  any of the 10 calls.
+- **News:** all 5 answers named "FinCorp", which the source does not contain.
+  The source is one sentence; the model wrote three distinct headlines that
+  add claims beyond it (for example about lifting Q4 profit margins). The
+  grounding check does not look at headlines.
+- **Every answer the contract accepted (9 of 9) contained at least one value
+  the source does not support**, and the same check that the pipeline uses
+  flags each of them.
+- **How far to trust this:** the prompt is a reconstruction (the current
+  prompt minus the rule), not the original text. It is one model. At
+  temperature 0 the repeats are almost identical (the 4 financial answers
+  were the same), so this is one observed behaviour repeated, not 5
+  independent trials. The comparison with the saved run is not controlled:
+  with the rule, the financial intent gave values in 0 of 3 calls (3
+  refusals); without it, in 4 of 5. That is consistent with the rule helping
+  on the financial intent, but it does not prove it. On the news intent the
+  rule did not stop the invented or empty company name (cases A1 and A2), so
+  the grounding check is still needed.
 
 ## 6. Implementation notes
 
@@ -188,7 +226,9 @@ What the run shows, and what it does not:
   environment. I do not count them as evidence; the evidence is the file in
   section 5.
 - **Not verified:** behaviour on `gpt-4o-mini`, behaviour on FinCorp's real
-  sources, and any run larger than the one or two calls per case above.
+  sources, and any larger or more varied sample than the calls above
+  (1 to 2 per case in the main run, 5 per intent in the probe, at
+  temperature 0).
 
 ## 8. Questions
 
