@@ -1,29 +1,62 @@
 # FinCorp Enterprise RAG Pipeline (NexusFlow AI PoC)
 
-## Setup (VS Code terminal)
+LCEL pipeline: parallel retrieval (`RunnableParallel`), intent routing
+(`RunnableLambda`), Pydantic-validated outputs, and a grounding check that
+rejects placeholder or guessed values. See `design_proposal.md` for the
+design and `evidence/real_run_output.txt` for the saved output of a live run.
+
+## Setup (VS Code terminal, Windows PowerShell)
 
     python -m venv .venv
-    # Windows PowerShell:  .venv\Scripts\Activate.ps1
-    # Windows cmd:         .venv\Scripts\activate.bat
-    # macOS/Linux:         source .venv/bin/activate
-    pip install -r requirements.txt
-
-Copy `.env.example` to `.env` and put your NEW OpenAI key in it.
-`.env` is git-ignored; never commit it.
+    .venv\Scripts\Activate.ps1
+    python -m pip install -r requirements.txt
+    copy .env.example .env      # then put your key in .env; never commit it
 
 ## Run
 
-    python workflow_architecture.py   # live call, needs the key
-    pytest -v                         # offline tests; live ones need the key
+    python workflow_architecture.py   # both intents, live model, needs a key
+    python -m pytest -v               # offline tests (fake model)
+
+## Real-run evidence
+
+The offline tests use a fake model, so they only show that the code is wired
+correctly. The evidence of a real model run is produced by:
+
+    python run_evidence.py
+
+It writes `evidence/real_run_output.txt` with, for every case, the input, the
+exact prompt, the raw model output, the API metadata and the outcome:
+
+- A. grounding check OFF, mock records: what the Pydantic contract alone lets
+  through. The mock records have no company name, quarter year or net income;
+- B. grounding check ON, same mock records;
+- C. grounding check ON, complete test records (written for the run, not
+  FinCorp data): the success path for both intents;
+- D. invalid intent: a clear error, no model call.
+
+The saved run used Groq (`api.groq.com`) with `openai/gpt-oss-120b`, not
+`gpt-4o-mini`. Its results are summarised in section 5 of
+`design_proposal.md`. In short: the model sometimes refused to produce JSON
+(parser error), sometimes invented or left empty the company name (accepted by
+the contract alone, and in one case rejected by the grounding check), and
+answered correctly when the record was complete. The placeholders `UNKNOWN`
+and `0.0` did not appear in that run. Each case is one or two calls, so these
+are observations, not statistics.
+
+## Grounding check
+
+A Pydantic contract guarantees the shape of an answer, not its truth.
+`check_grounding` compares the parsed answer with the retrieved source and
+raises `UngroundedValueError` for a placeholder company name, or a company,
+quarter-and-year or `$` amount that the source does not contain. It is a
+heuristic text match: it does not verify headlines or sentiment, and it does
+not detect a repeated headline. The prompts also tell the model not to guess
+missing values.
 
 ## Development note
 
-The task targets `gpt-4o-mini` (the default). The live development runs were
-made on Groq's OpenAI-compatible endpoint with `openai/gpt-oss-120b`, set via
-`LLM_BASE_URL` and `LLM_MODEL` in `.env` (see `.env.example`). `gpt-4o-mini`
-itself was not run live.
-
-## Design proposal
-
-See `design_proposal.md`: the technical email on router chains, parallel
-execution and Pydantic contracts.
+The task targets `gpt-4o-mini` (the default in the code), which I have not
+run. Development and the saved evidence used another OpenAI-compatible
+provider through `LLM_BASE_URL` and `LLM_MODEL` in `.env` (see
+`.env.example`); the header of the evidence file states the model and
+endpoint used.

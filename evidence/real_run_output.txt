@@ -1,0 +1,390 @@
+
+========================================================================
+FinCorp RAG pipeline: run evidence
+========================================================================
+Mode: LIVE
+Model: openai/gpt-oss-120b
+Endpoint host: api.groq.com
+Date (UTC): 2026-11-08 16:02:38
+Python: 3.12.10
+Packages: langchain-core 1.7.4, langchain-openai 1.7.3, pydantic 2.14.2
+The API key is not recorded in this file.
+
+========================================================================
+A. Baseline: grounding check OFF, mock records (what the Pydantic contract alone lets through)
+========================================================================
+
+--- A1 baseline, mock records | intent='financial' ---
+Input: {'query': 'Impact of the new generative AI orchestration on Q4 profit margins', 'intent': 'financial'}
+API metadata: {'model_name': 'openai/gpt-oss-120b', 'id': 'chatcmpl-6fdcc237-d670-49bc-a225-d55b73b958a7', 'finish_reason': 'stop', 'token_usage': {'completion_tokens': 719, 'prompt_tokens': 625, 'total_tokens': 1344, 'completion_tokens_details': {'accepted_prediction_tokens': None, 'audio_tokens': None, 'reasoning_tokens': 674, 'rejected_prediction_tokens': None, 'text_tokens': None}, 'prompt_tokens_details': None, 'queue_time': 0.090348034, 'prompt_time': 0.024916838, 'completion_time': 1.496411843, 'total_time': 1.521328681}}
+Prompt sent to the model:
+You are a financial extraction engine for FinCorp.
+Using ONLY the retrieved record and the user query below, extract the data
+into the required JSON contract. Report monetary values as floats in
+millions (e.g. $45B -> 45000.0). The quarter must look like 'Q3 2023'.
+Use ONLY values stated in the record or the query. Never guess a missing
+value and never use placeholders such as UNKNOWN or 0: answers containing
+values that are not in the source are rejected by a downstream check.
+
+User query: Impact of the new generative AI orchestration on Q4 profit margins
+
+Retrieved financial record:
+Financial Data DB Record: Q3 EPS $1.25, Net Revenue $45B. Associated query: 'Impact of the new generative AI orchestration on Q4 profit margins'.
+
+The output should be formatted as a JSON instance that conforms to the JSON schema below.
+
+As an example, for the schema {"properties": {"foo": {"title": "Foo", "description": "a list of strings", "type": "array", "items": {"type": "string"}}}, "required": ["foo"]}
+the object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.
+
+Here is the output schema:
+```
+{"description": "Strict contract for the ``financial_summary`` schema.\n\nActs as a structural contract that removes noise from LLM outputs for\nthe downstream reporting tools used by FinCorp.", "properties": {"company_name": {"description": "The official ticker or registered name of the entity (e.g. 'FinCorp Inc.', 'AAPL').", "title": "Company Name", "type": "string"}, "quarter": {"description": "The fiscal quarter and year referenced in the query, strictly in the format 'QX YYYY' (e.g. 'Q3 2023').", "pattern": "^Q[1-4] \\d{4}$", "title": "Quarter", "type": "string"}, "total_revenue": {"description": "Total consolidated revenue for the quarter as a numeric float in millions (e.g. 12450.50).", "title": "Total Revenue", "type": "number"}, "net_income": {"description": "Bottom-line net income for the quarter as a numeric float in millions (e.g. 3120.75).", "title": "Net Income", "type": "number"}}, "required": ["company_name", "quarter", "total_revenue", "net_income"]}
+```
+Raw model output:
+I’m unable to provide a complete `financial_summary` record because the necessary data (company name, quarter, and net income) are not available in the supplied record.
+Outcome: ERROR OutputParserException: Invalid json output: I’m unable to provide a complete `financial_summary` record because the necessary data (company name, quarter, and net income) are not available in the supplied record.
+For troubleshooting, visit: https://docs.langchain.com/oss/python/langchain/errors/OUTPUT_PARSING_FAILURE 
+Elapsed: 2.3s
+
+--- A1 baseline, mock records | intent='news' ---
+Input: {'query': 'Impact of the new generative AI orchestration on Q4 profit margins', 'intent': 'news'}
+API metadata: {'model_name': 'openai/gpt-oss-120b', 'id': 'chatcmpl-78868f95-0bcd-4c88-b5a2-2b3b7e5b9700', 'finish_reason': 'stop', 'token_usage': {'completion_tokens': 989, 'prompt_tokens': 568, 'total_tokens': 1557, 'completion_tokens_details': {'accepted_prediction_tokens': None, 'audio_tokens': None, 'reasoning_tokens': 910, 'rejected_prediction_tokens': None, 'text_tokens': None}, 'prompt_tokens_details': None, 'queue_time': 0.090019584, 'prompt_time': 0.026643355, 'completion_time': 2.0833317080000002, 'total_time': 2.109975063}}
+Prompt sent to the model:
+You are a market news analysis engine for FinCorp.
+Using ONLY the retrieved news and the user query below, produce a sentiment
+overview in the required JSON contract. The sentiment score must be between
+-1.0 and 1.0, and top_headlines must contain exactly 3 headlines.
+Use ONLY facts stated in the news or the query. Never guess a missing value
+(such as the company name) and never use placeholders such as UNKNOWN:
+answers containing values that are not in the source are rejected by a
+downstream check.
+
+User query: Impact of the new generative AI orchestration on Q4 profit margins
+
+Retrieved news:
+News Wire Extract: Analysts upgrade target stock amidst strong AI integration rally. Associated query: 'Impact of the new generative AI orchestration on Q4 profit margins'.
+
+The output should be formatted as a JSON instance that conforms to the JSON schema below.
+
+As an example, for the schema {"properties": {"foo": {"title": "Foo", "description": "a list of strings", "type": "array", "items": {"type": "string"}}}, "required": ["foo"]}
+the object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.
+
+Here is the output schema:
+```
+{"description": "Strict contract for the ``market_news`` schema.\n\nEnsures unstructured news is parsed into a reliable, consistent format.", "properties": {"company_name": {"description": "The target company being analyzed in the news aggregator.", "title": "Company Name", "type": "string"}, "sentiment_score": {"description": "Sentiment derived from the aggregated news, a float between -1.0 (highly negative) and 1.0 (highly positive).", "maximum": 1.0, "minimum": -1.0, "title": "Sentiment Score", "type": "number"}, "top_headlines": {"description": "Exactly the top 3 most relevant news headlines impacting the company's market perception.", "items": {"type": "string"}, "maxItems": 3, "minItems": 3, "title": "Top Headlines", "type": "array"}}, "required": ["company_name", "sentiment_score", "top_headlines"]}
+```
+Raw model output:
+{
+  "company_name": "FinCorp",
+  "sentiment_score": 0.7,
+  "top_headlines": [
+    "Analysts upgrade target stock amidst strong AI integration rally.",
+    "Analysts upgrade target stock amidst strong AI integration rally.",
+    "Analysts upgrade target stock amidst strong AI integration rally."
+  ]
+}
+Outcome: ACCEPTED -> MarketNews
+{
+  "company_name": "FinCorp",
+  "sentiment_score": 0.7,
+  "top_headlines": [
+    "Analysts upgrade target stock amidst strong AI integration rally.",
+    "Analysts upgrade target stock amidst strong AI integration rally.",
+    "Analysts upgrade target stock amidst strong AI integration rally."
+  ]
+}
+Placeholder-looking values: none
+Elapsed: 2.4s
+
+--- A2 baseline, mock records | intent='financial' ---
+Input: {'query': 'Impact of the new generative AI orchestration on Q4 profit margins', 'intent': 'financial'}
+API metadata: {'model_name': 'openai/gpt-oss-120b', 'id': 'chatcmpl-aa7b3c96-4bd5-4bdc-adb1-701ba4dea6ff', 'finish_reason': 'stop', 'token_usage': {'completion_tokens': 687, 'prompt_tokens': 625, 'total_tokens': 1312, 'completion_tokens_details': {'accepted_prediction_tokens': None, 'audio_tokens': None, 'reasoning_tokens': 625, 'rejected_prediction_tokens': None, 'text_tokens': None}, 'prompt_tokens_details': None, 'queue_time': 0.211681992, 'prompt_time': 0.035208622, 'completion_time': 1.433064624, 'total_time': 1.4682732459999999}}
+Prompt sent to the model:
+You are a financial extraction engine for FinCorp.
+Using ONLY the retrieved record and the user query below, extract the data
+into the required JSON contract. Report monetary values as floats in
+millions (e.g. $45B -> 45000.0). The quarter must look like 'Q3 2023'.
+Use ONLY values stated in the record or the query. Never guess a missing
+value and never use placeholders such as UNKNOWN or 0: answers containing
+values that are not in the source are rejected by a downstream check.
+
+User query: Impact of the new generative AI orchestration on Q4 profit margins
+
+Retrieved financial record:
+Financial Data DB Record: Q3 EPS $1.25, Net Revenue $45B. Associated query: 'Impact of the new generative AI orchestration on Q4 profit margins'.
+
+The output should be formatted as a JSON instance that conforms to the JSON schema below.
+
+As an example, for the schema {"properties": {"foo": {"title": "Foo", "description": "a list of strings", "type": "array", "items": {"type": "string"}}}, "required": ["foo"]}
+the object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.
+
+Here is the output schema:
+```
+{"description": "Strict contract for the ``financial_summary`` schema.\n\nActs as a structural contract that removes noise from LLM outputs for\nthe downstream reporting tools used by FinCorp.", "properties": {"company_name": {"description": "The official ticker or registered name of the entity (e.g. 'FinCorp Inc.', 'AAPL').", "title": "Company Name", "type": "string"}, "quarter": {"description": "The fiscal quarter and year referenced in the query, strictly in the format 'QX YYYY' (e.g. 'Q3 2023').", "pattern": "^Q[1-4] \\d{4}$", "title": "Quarter", "type": "string"}, "total_revenue": {"description": "Total consolidated revenue for the quarter as a numeric float in millions (e.g. 12450.50).", "title": "Total Revenue", "type": "number"}, "net_income": {"description": "Bottom-line net income for the quarter as a numeric float in millions (e.g. 3120.75).", "title": "Net Income", "type": "number"}}, "required": ["company_name", "quarter", "total_revenue", "net_income"]}
+```
+Raw model output:
+{
+  "error": "Insufficient data to populate the required fields. The record provides Q3 revenue information, but the query asks about Q4 profit margins, and no company name, quarter year, or net income values are available in the provided data."
+}
+Outcome: ERROR OutputParserException: Failed to parse FinancialSummary from completion {"error": "Insufficient data to populate the required fields. The record provides Q3 revenue information, but the query asks about Q4 profit margins, and no company name, quarter year, or net income values are available in the provided data."}. Got: 4 validation errors for FinancialSummary
+company_name
+  Field required [type=missing, input_value={'error': 'Insufficient d... in the provided data.'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.14/v/missing
+quarter
+  Field required [type=missing, input_value={'error': 'Insufficient d... in the provided data.'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.14/v/missing
+total_revenue
+  Field required [type=missing, input_value={'error': 'Insufficient d... in the provided data.'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.14/v/missing
+net_income
+  Field required [type=missing, input_value={'error': 'Insufficient d... in the provided data.'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.14/v/missing
+For troubleshooting, visit: https://docs.langchain.com/oss/python/langchain/errors/OUTPUT_PARSING_FAILURE 
+Elapsed: 1.9s
+
+--- A2 baseline, mock records | intent='news' ---
+Input: {'query': 'Impact of the new generative AI orchestration on Q4 profit margins', 'intent': 'news'}
+API metadata: {'model_name': 'openai/gpt-oss-120b', 'id': 'chatcmpl-a2b8c067-3a1b-450a-809a-35ed917356aa', 'finish_reason': 'stop', 'token_usage': {'completion_tokens': 787, 'prompt_tokens': 568, 'total_tokens': 1355, 'completion_tokens_details': {'accepted_prediction_tokens': None, 'audio_tokens': None, 'reasoning_tokens': 711, 'rejected_prediction_tokens': None, 'text_tokens': None}, 'prompt_tokens_details': None, 'queue_time': 0.262443718, 'prompt_time': 0.027278874, 'completion_time': 1.629653946, 'total_time': 1.65693282}}
+Prompt sent to the model:
+You are a market news analysis engine for FinCorp.
+Using ONLY the retrieved news and the user query below, produce a sentiment
+overview in the required JSON contract. The sentiment score must be between
+-1.0 and 1.0, and top_headlines must contain exactly 3 headlines.
+Use ONLY facts stated in the news or the query. Never guess a missing value
+(such as the company name) and never use placeholders such as UNKNOWN:
+answers containing values that are not in the source are rejected by a
+downstream check.
+
+User query: Impact of the new generative AI orchestration on Q4 profit margins
+
+Retrieved news:
+News Wire Extract: Analysts upgrade target stock amidst strong AI integration rally. Associated query: 'Impact of the new generative AI orchestration on Q4 profit margins'.
+
+The output should be formatted as a JSON instance that conforms to the JSON schema below.
+
+As an example, for the schema {"properties": {"foo": {"title": "Foo", "description": "a list of strings", "type": "array", "items": {"type": "string"}}}, "required": ["foo"]}
+the object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.
+
+Here is the output schema:
+```
+{"description": "Strict contract for the ``market_news`` schema.\n\nEnsures unstructured news is parsed into a reliable, consistent format.", "properties": {"company_name": {"description": "The target company being analyzed in the news aggregator.", "title": "Company Name", "type": "string"}, "sentiment_score": {"description": "Sentiment derived from the aggregated news, a float between -1.0 (highly negative) and 1.0 (highly positive).", "maximum": 1.0, "minimum": -1.0, "title": "Sentiment Score", "type": "number"}, "top_headlines": {"description": "Exactly the top 3 most relevant news headlines impacting the company's market perception.", "items": {"type": "string"}, "maxItems": 3, "minItems": 3, "title": "Top Headlines", "type": "array"}}, "required": ["company_name", "sentiment_score", "top_headlines"]}
+```
+Raw model output:
+{
+  "company_name": "",
+  "sentiment_score": 0.7,
+  "top_headlines": [
+    "Analysts upgrade target stock amidst strong AI integration rally.",
+    "Analysts upgrade target stock amidst strong AI integration rally.",
+    "Analysts upgrade target stock amidst strong AI integration rally."
+  ]
+}
+Outcome: ACCEPTED -> MarketNews
+{
+  "company_name": "",
+  "sentiment_score": 0.7,
+  "top_headlines": [
+    "Analysts upgrade target stock amidst strong AI integration rally.",
+    "Analysts upgrade target stock amidst strong AI integration rally.",
+    "Analysts upgrade target stock amidst strong AI integration rally."
+  ]
+}
+Placeholder-looking values: none
+Elapsed: 2.1s
+
+========================================================================
+B. Grounding check ON, same mock records
+========================================================================
+
+--- B guard ON, mock records | intent='financial' ---
+Input: {'query': 'Impact of the new generative AI orchestration on Q4 profit margins', 'intent': 'financial'}
+API metadata: {'model_name': 'openai/gpt-oss-120b', 'id': 'chatcmpl-3284d50c-0320-4651-8867-b331369749db', 'finish_reason': 'stop', 'token_usage': {'completion_tokens': 475, 'prompt_tokens': 625, 'total_tokens': 1100, 'completion_tokens_details': {'accepted_prediction_tokens': None, 'audio_tokens': None, 'reasoning_tokens': 432, 'rejected_prediction_tokens': None, 'text_tokens': None}, 'prompt_tokens_details': None, 'queue_time': 0.017975794, 'prompt_time': 0.026783192, 'completion_time': 0.988380467, 'total_time': 1.015163659}}
+Prompt sent to the model:
+You are a financial extraction engine for FinCorp.
+Using ONLY the retrieved record and the user query below, extract the data
+into the required JSON contract. Report monetary values as floats in
+millions (e.g. $45B -> 45000.0). The quarter must look like 'Q3 2023'.
+Use ONLY values stated in the record or the query. Never guess a missing
+value and never use placeholders such as UNKNOWN or 0: answers containing
+values that are not in the source are rejected by a downstream check.
+
+User query: Impact of the new generative AI orchestration on Q4 profit margins
+
+Retrieved financial record:
+Financial Data DB Record: Q3 EPS $1.25, Net Revenue $45B. Associated query: 'Impact of the new generative AI orchestration on Q4 profit margins'.
+
+The output should be formatted as a JSON instance that conforms to the JSON schema below.
+
+As an example, for the schema {"properties": {"foo": {"title": "Foo", "description": "a list of strings", "type": "array", "items": {"type": "string"}}}, "required": ["foo"]}
+the object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.
+
+Here is the output schema:
+```
+{"description": "Strict contract for the ``financial_summary`` schema.\n\nActs as a structural contract that removes noise from LLM outputs for\nthe downstream reporting tools used by FinCorp.", "properties": {"company_name": {"description": "The official ticker or registered name of the entity (e.g. 'FinCorp Inc.', 'AAPL').", "title": "Company Name", "type": "string"}, "quarter": {"description": "The fiscal quarter and year referenced in the query, strictly in the format 'QX YYYY' (e.g. 'Q3 2023').", "pattern": "^Q[1-4] \\d{4}$", "title": "Quarter", "type": "string"}, "total_revenue": {"description": "Total consolidated revenue for the quarter as a numeric float in millions (e.g. 12450.50).", "title": "Total Revenue", "type": "number"}, "net_income": {"description": "Bottom-line net income for the quarter as a numeric float in millions (e.g. 3120.75).", "title": "Net Income", "type": "number"}}, "required": ["company_name", "quarter", "total_revenue", "net_income"]}
+```
+Raw model output:
+I’m unable to provide the requested financial summary because the necessary data (company name, quarter, and net income) for Q4 is not present in the retrieved record.
+Outcome: ERROR OutputParserException: Invalid json output: I’m unable to provide the requested financial summary because the necessary data (company name, quarter, and net income) for Q4 is not present in the retrieved record.
+For troubleshooting, visit: https://docs.langchain.com/oss/python/langchain/errors/OUTPUT_PARSING_FAILURE 
+Elapsed: 1.2s
+
+--- B guard ON, mock records | intent='news' ---
+Input: {'query': 'Impact of the new generative AI orchestration on Q4 profit margins', 'intent': 'news'}
+API metadata: {'model_name': 'openai/gpt-oss-120b', 'id': 'chatcmpl-743a6b3b-1e10-41a7-91a7-34eb9261dd94', 'finish_reason': 'stop', 'token_usage': {'completion_tokens': 720, 'prompt_tokens': 568, 'total_tokens': 1288, 'completion_tokens_details': {'accepted_prediction_tokens': None, 'audio_tokens': None, 'reasoning_tokens': 641, 'rejected_prediction_tokens': None, 'text_tokens': None}, 'prompt_tokens_details': None, 'queue_time': 0.211174573, 'prompt_time': 0.026977452, 'completion_time': 1.512507495, 'total_time': 1.539484947}}
+Prompt sent to the model:
+You are a market news analysis engine for FinCorp.
+Using ONLY the retrieved news and the user query below, produce a sentiment
+overview in the required JSON contract. The sentiment score must be between
+-1.0 and 1.0, and top_headlines must contain exactly 3 headlines.
+Use ONLY facts stated in the news or the query. Never guess a missing value
+(such as the company name) and never use placeholders such as UNKNOWN:
+answers containing values that are not in the source are rejected by a
+downstream check.
+
+User query: Impact of the new generative AI orchestration on Q4 profit margins
+
+Retrieved news:
+News Wire Extract: Analysts upgrade target stock amidst strong AI integration rally. Associated query: 'Impact of the new generative AI orchestration on Q4 profit margins'.
+
+The output should be formatted as a JSON instance that conforms to the JSON schema below.
+
+As an example, for the schema {"properties": {"foo": {"title": "Foo", "description": "a list of strings", "type": "array", "items": {"type": "string"}}}, "required": ["foo"]}
+the object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.
+
+Here is the output schema:
+```
+{"description": "Strict contract for the ``market_news`` schema.\n\nEnsures unstructured news is parsed into a reliable, consistent format.", "properties": {"company_name": {"description": "The target company being analyzed in the news aggregator.", "title": "Company Name", "type": "string"}, "sentiment_score": {"description": "Sentiment derived from the aggregated news, a float between -1.0 (highly negative) and 1.0 (highly positive).", "maximum": 1.0, "minimum": -1.0, "title": "Sentiment Score", "type": "number"}, "top_headlines": {"description": "Exactly the top 3 most relevant news headlines impacting the company's market perception.", "items": {"type": "string"}, "maxItems": 3, "minItems": 3, "title": "Top Headlines", "type": "array"}}, "required": ["company_name", "sentiment_score", "top_headlines"]}
+```
+Raw model output:
+{
+  "company_name": "FinCorp",
+  "sentiment_score": 0.8,
+  "top_headlines": [
+    "Analysts upgrade target stock amidst strong AI integration rally.",
+    "Analysts upgrade target stock amidst strong AI integration rally.",
+    "Analysts upgrade target stock amidst strong AI integration rally."
+  ]
+}
+Outcome: REJECTED by the grounding check
+  - company_name='FinCorp' is not in the source or the query
+Elapsed: 1.9s
+
+========================================================================
+C. Grounding check ON, complete TEST records (written for this run; not FinCorp data)
+========================================================================
+
+--- C guard ON, complete test records | intent='financial' ---
+Input: {'query': 'Impact of the new generative AI orchestration on Q4 profit margins', 'intent': 'financial'}
+API metadata: {'model_name': 'openai/gpt-oss-120b', 'id': 'chatcmpl-ed789542-d953-4374-a72b-aec5a27dfac9', 'finish_reason': 'stop', 'token_usage': {'completion_tokens': 304, 'prompt_tokens': 641, 'total_tokens': 945, 'completion_tokens_details': {'accepted_prediction_tokens': None, 'audio_tokens': None, 'reasoning_tokens': 249, 'rejected_prediction_tokens': None, 'text_tokens': None}, 'prompt_tokens_details': None, 'queue_time': 0.262579063, 'prompt_time': 0.02823291, 'completion_time': 0.628437557, 'total_time': 0.656670467}}
+Prompt sent to the model:
+You are a financial extraction engine for FinCorp.
+Using ONLY the retrieved record and the user query below, extract the data
+into the required JSON contract. Report monetary values as floats in
+millions (e.g. $45B -> 45000.0). The quarter must look like 'Q3 2023'.
+Use ONLY values stated in the record or the query. Never guess a missing
+value and never use placeholders such as UNKNOWN or 0: answers containing
+values that are not in the source are rejected by a downstream check.
+
+User query: Impact of the new generative AI orchestration on Q4 profit margins
+
+Retrieved financial record:
+Financial Data DB Record: FinCorp Inc., Q3 2023, Total Revenue $45B, Net Income $9.2B, EPS $1.25. Associated query: 'Impact of the new generative AI orchestration on Q4 profit margins'.
+
+The output should be formatted as a JSON instance that conforms to the JSON schema below.
+
+As an example, for the schema {"properties": {"foo": {"title": "Foo", "description": "a list of strings", "type": "array", "items": {"type": "string"}}}, "required": ["foo"]}
+the object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.
+
+Here is the output schema:
+```
+{"description": "Strict contract for the ``financial_summary`` schema.\n\nActs as a structural contract that removes noise from LLM outputs for\nthe downstream reporting tools used by FinCorp.", "properties": {"company_name": {"description": "The official ticker or registered name of the entity (e.g. 'FinCorp Inc.', 'AAPL').", "title": "Company Name", "type": "string"}, "quarter": {"description": "The fiscal quarter and year referenced in the query, strictly in the format 'QX YYYY' (e.g. 'Q3 2023').", "pattern": "^Q[1-4] \\d{4}$", "title": "Quarter", "type": "string"}, "total_revenue": {"description": "Total consolidated revenue for the quarter as a numeric float in millions (e.g. 12450.50).", "title": "Total Revenue", "type": "number"}, "net_income": {"description": "Bottom-line net income for the quarter as a numeric float in millions (e.g. 3120.75).", "title": "Net Income", "type": "number"}}, "required": ["company_name", "quarter", "total_revenue", "net_income"]}
+```
+Raw model output:
+{
+  "company_name": "FinCorp Inc.",
+  "quarter": "Q3 2023",
+  "total_revenue": 45000.0,
+  "net_income": 9200.0
+}
+Outcome: ACCEPTED -> FinancialSummary
+{
+  "company_name": "FinCorp Inc.",
+  "quarter": "Q3 2023",
+  "total_revenue": 45000.0,
+  "net_income": 9200.0
+}
+Placeholder-looking values: none
+Elapsed: 2.3s
+
+--- C guard ON, complete test records | intent='news' ---
+Input: {'query': 'Impact of the new generative AI orchestration on Q4 profit margins', 'intent': 'news'}
+API metadata: {'model_name': 'openai/gpt-oss-120b', 'id': 'chatcmpl-27ab2828-efd9-4d78-944a-752264fafb24', 'finish_reason': 'stop', 'token_usage': {'completion_tokens': 299, 'prompt_tokens': 616, 'total_tokens': 915, 'completion_tokens_details': {'accepted_prediction_tokens': None, 'audio_tokens': None, 'reasoning_tokens': 222, 'rejected_prediction_tokens': None, 'text_tokens': None}, 'prompt_tokens_details': None, 'queue_time': 0.047959167, 'prompt_time': 0.024441954, 'completion_time': 0.627459125, 'total_time': 0.651901079}}
+Prompt sent to the model:
+You are a market news analysis engine for FinCorp.
+Using ONLY the retrieved news and the user query below, produce a sentiment
+overview in the required JSON contract. The sentiment score must be between
+-1.0 and 1.0, and top_headlines must contain exactly 3 headlines.
+Use ONLY facts stated in the news or the query. Never guess a missing value
+(such as the company name) and never use placeholders such as UNKNOWN:
+answers containing values that are not in the source are rejected by a
+downstream check.
+
+User query: Impact of the new generative AI orchestration on Q4 profit margins
+
+Retrieved news:
+News Wire Extract for FinCorp Inc.: Analysts upgrade FinCorp Inc. target stock amidst strong AI integration rally. Headlines: (1) Analysts upgrade FinCorp stock to Buy; (2) FinCorp generative AI orchestration lifts Q4 margin outlook; (3) AI integration rally extends across enterprise software. Associated query: 'Impact of the new generative AI orchestration on Q4 profit margins'.
+
+The output should be formatted as a JSON instance that conforms to the JSON schema below.
+
+As an example, for the schema {"properties": {"foo": {"title": "Foo", "description": "a list of strings", "type": "array", "items": {"type": "string"}}}, "required": ["foo"]}
+the object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.
+
+Here is the output schema:
+```
+{"description": "Strict contract for the ``market_news`` schema.\n\nEnsures unstructured news is parsed into a reliable, consistent format.", "properties": {"company_name": {"description": "The target company being analyzed in the news aggregator.", "title": "Company Name", "type": "string"}, "sentiment_score": {"description": "Sentiment derived from the aggregated news, a float between -1.0 (highly negative) and 1.0 (highly positive).", "maximum": 1.0, "minimum": -1.0, "title": "Sentiment Score", "type": "number"}, "top_headlines": {"description": "Exactly the top 3 most relevant news headlines impacting the company's market perception.", "items": {"type": "string"}, "maxItems": 3, "minItems": 3, "title": "Top Headlines", "type": "array"}}, "required": ["company_name", "sentiment_score", "top_headlines"]}
+```
+Raw model output:
+{
+  "company_name": "FinCorp Inc.",
+  "sentiment_score": 0.85,
+  "top_headlines": [
+    "Analysts upgrade FinCorp stock to Buy",
+    "FinCorp generative AI orchestration lifts Q4 margin outlook",
+    "AI integration rally extends across enterprise software"
+  ]
+}
+Outcome: ACCEPTED -> MarketNews
+{
+  "company_name": "FinCorp Inc.",
+  "sentiment_score": 0.85,
+  "top_headlines": [
+    "Analysts upgrade FinCorp stock to Buy",
+    "FinCorp generative AI orchestration lifts Q4 margin outlook",
+    "AI integration rally extends across enterprise software"
+  ]
+}
+Placeholder-looking values: none
+Elapsed: 5.1s
+
+========================================================================
+D. Invalid intent (no model call)
+========================================================================
+
+--- D invalid intent | intent='weather' ---
+Input: {'query': 'Impact of the new generative AI orchestration on Q4 profit margins', 'intent': 'weather'}
+Outcome: ERROR ValueError: Unsupported or missing intent: 'weather'. Supported intents: financial, news.
+Elapsed: 0.0s
+
+========================================================================
+SUMMARY
+========================================================================
+Case                                         Intent     Outcome                      Placeholders
+A1 baseline, mock records                    financial  ERROR (OutputParserException) n/a
+A1 baseline, mock records                    news       ACCEPTED                     none
+A2 baseline, mock records                    financial  ERROR (OutputParserException) n/a
+A2 baseline, mock records                    news       ACCEPTED                     none
+B guard ON, mock records                     financial  ERROR (OutputParserException) n/a
+B guard ON, mock records                     news       REJECTED (grounding check)   n/a
+C guard ON, complete test records            financial  ACCEPTED                     none
+C guard ON, complete test records            news       ACCEPTED                     none
+D invalid intent                             weather    ERROR (ValueError)           n/a

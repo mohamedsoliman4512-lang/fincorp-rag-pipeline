@@ -1,14 +1,14 @@
 **To:** Lead Architect, NexusFlow AI  
-**From:** Mohamed Emad  
-**Subject:** FinCorp RAG orchestration: parallel retrieval, intent routing and Pydantic contracts (PoC architecture)
+**From:** Mohamed Soliman  
+**Subject:** FinCorp RAG orchestration: parallel retrieval, intent routing and Pydantic contracts (PoC architecture and real-run evidence)
 
 Hi,
 
 Below is the strategy behind the FinCorp proof of concept, with the functional
 LCEL stub in `workflow_architecture.py`. In short: we fetch both data sources
 **concurrently**, **route** each request to a dedicated chain, and force every
-LLM answer through a **Pydantic contract** so that nothing malformed reaches
-FinCorp's reporting tools.
+LLM answer through a **Pydantic contract** plus a **grounding check**, so that
+nothing malformed or unsupported reaches FinCorp's reporting tools.
 
 ## 1. Architecture at a glance
 
@@ -20,10 +20,11 @@ flowchart LR
     L --> N["fetch_unstructured_news"]
     F --> R["RunnableLambda router<br/>reads intent"]
     N --> R
-    R -->|"financial"| C1["Prompt | gpt-4o-mini | FinancialSummary parser"]
-    R -->|"news"| C2["Prompt | gpt-4o-mini | MarketNews parser"]
-    C1 --> O["Validated Pydantic object"]
-    C2 --> O
+    R -->|"financial"| C1["Prompt | model | FinancialSummary parser"]
+    R -->|"news"| C2["Prompt | model | MarketNews parser"]
+    C1 --> G["check_grounding"]
+    C2 --> G
+    G --> O["Validated Pydantic object"]
 ```
 
 ## 2. Linear chain vs router chain
@@ -57,14 +58,15 @@ runs them together. Total retrieval time becomes the slowest call instead of
 the sum of both. Retrieval is I/O-bound, so this gain grows with real network
 latency.
 
-What I verified: with two simulated 0.5 s fetches, the loader returned in
-about 0.5 s (a sequential run would take about 1.0 s), and the two branches ran
-on separate threads. What I have not measured: real gains against FinCorp's
-actual sources, since the PoC uses mock functions. One cost to note: both
-sources are fetched even though only one feeds the chosen chain. I kept that
-because the brief asks for concurrent retrieval, and requests such as the
-sample query ("impact of generative AI on Q4 margins") plausibly need both
-kinds of data. If most requests need only one source, routing before
+What I verified: with two simulated 0.5 s fetches (offline test), the loader
+returned in about 0.5 s (a sequential run would take about 1.0 s), and the two
+branches ran on separate threads. What I have not measured: real gains against
+FinCorp's actual sources, since the PoC uses mock functions. The elapsed times
+in the real run (section 5) are LLM call times, not retrieval times. One cost
+to note: both sources are fetched even though only one feeds the chosen chain.
+I kept that because the brief asks for concurrent retrieval, and requests such
+as the sample query ("impact of generative AI on Q4 margins") plausibly need
+both kinds of data. If most requests need only one source, routing before
 retrieval would avoid the wasted fetch.
 
 ## 4. How the Pydantic contracts stop noise and hallucinations
@@ -81,52 +83,122 @@ three points:
    on any mismatch, so a malformed answer stops at the parsing step instead of
    reaching the dashboard.
 
-Tests confirm this: a bad quarter format, an out-of-range score, 2 or 4
-headlines, and a reply missing fields are all rejected.
+**What a contract cannot do.** It guarantees the *shape* of the data, not its
+*truth*. Any string is a valid `company_name`, and any float is a valid
+`net_income`. So a second layer sits behind the parser:
 
-**Limitation you should know about.** A contract guarantees the *shape* of the
-data, not its *truth*. In live runs on the Groq-hosted model (see section 6) with our mock records
-(which contain no company name and no net income), the model satisfied the
-required fields with placeholders (such as `UNKNOWN` and `0.0`). Both are schema-valid, but a net income of
-`0.0` looks like a real figure. Proposed mitigations, none implemented yet:
-agree with FinCorp on an explicit "not reported" representation for fields the
-sources do not contain, check extracted numbers against the retrieved text,
-and retry on validation failure.
+- **Prompt rule:** both prompts say to use only values stated in the source or
+  the query, never to guess, and never to use placeholders such as `UNKNOWN`
+  or `0`.
+- **`check_grounding` (default on, `enforce_grounding=False` turns it off):**
+  after parsing, it raises `UngroundedValueError` if the company name is a
+  placeholder or does not appear in the retrieved text or the query, if the
+  quarter and year are not both present in them, or if `total_revenue` or
+  `net_income` do not match a `$` amount in the record (0.5% tolerance).
+  For news it checks the company name only.
 
-## 5. Implementation notes
+The check is a simple text match. It cannot judge a sentiment score or a
+headline's meaning, and it cannot tell a correct number from a coincidental
+one.
+
+## 5. Real-run evidence
+
+The full output of a live run is saved in `evidence/real_run_output.txt`
+(produced by `run_evidence.py`). It contains, for each case, the prompt sent,
+the raw model output, the API metadata and the outcome.
+
+**Model and endpoint, stated plainly:** the run used **Groq's
+OpenAI-compatible endpoint (`api.groq.com`) with `openai/gpt-oss-120b`**, not
+`gpt-4o-mini`. I had no OpenAI key. The default in the code is still
+`gpt-4o-mini`; I have not run it. Run date: 2026-11-08 (UTC), langchain-core
+1.7.4, langchain-openai 1.7.3, pydantic 2.14.2. The key is not recorded in
+the file.
+
+| Case | Intent | Grounding check | Records | Outcome |
+|---|---|---|---|---|
+| A1 | financial | off | mock | Parser error: the model answered in prose that the data was missing |
+| A1 | news | off | mock | Accepted. `company_name` = "FinCorp", which is not in the source; one headline repeated 3 times |
+| A2 | financial | off | mock | Parser error: the model returned `{"error": ...}`, 4 required fields missing |
+| A2 | news | off | mock | Accepted. `company_name` = "" (empty); one headline repeated 3 times |
+| B | financial | on | mock | Parser error (prose answer); the grounding check was never reached |
+| B | news | on | mock | **Rejected by the grounding check:** `company_name='FinCorp'` is not in the source or the query |
+| C | financial | on | complete test | Accepted: FinCorp Inc., Q3 2023, revenue 45000.0, net income 9200.0 |
+| C | news | on | complete test | Accepted: FinCorp Inc., score 0.85, 3 distinct headlines from the source |
+| D | invalid (`weather`) | on | none | `ValueError: Unsupported or missing intent` (no model call) |
+
+"Mock" is the PoC's own mock record, which has no company name, quarter year
+or net income. "Complete test" records were written by me for this run to give
+the model a source that contains every field; they are not FinCorp data.
+
+What the run shows, and what it does not:
+
+1. **`UNKNOWN` and `0.0` did not appear in this run.** The earlier version of
+   this proposal said the model filled the missing fields with those
+   placeholders. That was an observation from an earlier development run whose
+   output I did not save, so I cannot show it, and I have removed it as a
+   finding. This run used the prompt with the explicit anti-placeholder rule.
+   On the financial intent the model refused instead (3 of 3 calls). I have no
+   run without the rule, so I cannot say whether the rule is the reason.
+2. **The contract alone let unsupported values through.** In A1 (news) it
+   accepted an invented company name, and in A2 (news) an empty one. The
+   placeholder detector inside `run_evidence.py` reported "none" for both,
+   because it only looks for words like `UNKNOWN` and `0.0`. An empty string
+   is not in its list.
+3. **The grounding check caught the invented name in B (news).** By code
+   reading, it would also reject the empty name from A2, since an empty string
+   never appears in the source; no test and no live call exercised that case.
+   This is not a controlled comparison: each case is one or two calls, and
+   the outputs differ from call to call (A1 gave "FinCorp", A2 gave "").
+   One plausible reason for "FinCorp" is that the prompt itself starts with
+   "You are ... for FinCorp"; that is my inference, not something the run proves.
+4. **On the financial intent, the contract acted as a hard stop.** With the
+   mock record the model never produced JSON, and the parser raised an error
+   (A1, A2, B), so nothing reached a downstream tool. The guard's financial
+   checks (quarter, year, amounts) were only exercised live in C, where they
+   passed. Their rejection behaviour is covered by offline tests only.
+5. **"Exactly 3 headlines" pushed the model to pad.** When the source had one
+   headline, it repeated it three times (A1 and A2 news). The shape is valid;
+   the information is not. The grounding check does not catch this.
+6. **With complete records, both intents returned grounded answers** (C), and
+   the grounding check passed them.
+
+## 6. Implementation notes
 
 - `route_query` takes an extra `chains` argument, bound with
   `functools.partial`, so the router can reach the chains built inside
   `build_fincorp_pipeline()` without global variables.
 - `RunnablePassthrough.assign` keeps `query` and `intent` next to the
-  retrieved data, which the router and prompts both need.
-- `build_fincorp_pipeline` accepts an optional model so tests can inject a
-  fake one. The default is `gpt-4o-mini`. The optional `LLM_MODEL` and
-  `LLM_BASE_URL` environment variables point it at another
-  OpenAI-compatible provider, which is how the development runs in
-  section 6 were made. API keys come from the environment.
+  retrieved data, which the router and prompts both need. With the grounding
+  check on, it also keeps the retrieved text next to the parsed answer so the
+  check can compare them.
+- `build_fincorp_pipeline` accepts an optional model, and optional fetchers,
+  so tests can inject fakes. The default model is `gpt-4o-mini`. The optional
+  `LLM_MODEL` and `LLM_BASE_URL` environment variables point it at another
+  OpenAI-compatible provider, which is how the run in section 5 was made. API
+  keys come from the environment and are never committed.
 
-## 6. Status and testing environment
+## 7. Status and testing
 
-- **Verified by offline tests (8 passed):** each intent returns the correct
-  model with exactly one LLM call; an invalid or missing intent raises a clear
-  error; retrieval runs concurrently; schema constraints reject bad values.
-- **Live runs, on a different model:** I could not run the pipeline against
-  `gpt-4o-mini`. No OpenAI API key was available to me during development, so
-  the live runs used Groq's OpenAI-compatible endpoint with the model
-  `openai/gpt-oss-120b`, configured through `LLM_BASE_URL` and `LLM_MODEL`. On
-  that model, the `financial` and `news` intents each returned the correct
-  Pydantic object, and an invalid intent raised the expected error.
-- **Not verified:** behaviour on `gpt-4o-mini` itself. The default
-  configuration targets it, but I have not run it, so output quality, latency
-  and the placeholder behaviour described in section 4 may differ on that
-  model.
+- **Offline tests** (`python -m pytest -q`): they cover routing with
+  exactly one LLM call per intent, invalid-intent errors, concurrent
+  retrieval, schema limits, the grounding check and the submission
+  checks. They use a fake model, so they show the wiring, not model
+  behaviour.
+- **Skipped:** the two live tests, which need `OPENAI_API_KEY` in the
+  environment. I do not count them as evidence; the evidence is the file in
+  section 5.
+- **Not verified:** behaviour on `gpt-4o-mini`, behaviour on FinCorp's real
+  sources, and any run larger than the one or two calls per case above.
 
-## 7. Questions
+## 8. Questions
 
 1. How should the contract represent a value that is genuinely absent from the
-   sources (null, or a flagged default)?
-2. Where should intent classification live in the production design?
+   sources (null, or an explicit "not reported" flag)? In the run, the model
+   answered in prose or an error object rather than JSON when it had nothing to
+   fill in.
+2. Should `top_headlines` allow fewer than 3 items, so the model is not forced
+   to repeat one?
+3. Where should intent classification live in the production design?
 
 Best regards,  
-Mohamed Emad
+Mohamed Soliman
